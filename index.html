@@ -246,6 +246,23 @@ function closeForm() {
 function spin() {
     if (spinning) return;
 
+	 // 🔥 CHECK SĐT TRƯỚC
+    const playerRef = ref(db, 'players/' + currentUser.phone);
+
+    get(playerRef).then(snapshot => {
+        if (snapshot.exists()) {
+            alert("SĐT này đã quay rồi!");
+            return;
+        }
+
+        // ✅ CHƯA QUAY → cho quay
+        startSpin(playerRef);
+    });
+}
+
+
+	
+
     let totalQty = prizes.reduce((sum, p) => sum + p.qty, 0);
     if (totalQty <= 0) return alert("Hết quà rồi!");
 
@@ -322,6 +339,12 @@ function closeResult() {
 </script>
 
 <script type="module">
+//hàm get
+import { getDatabase, ref, set, onValue, get } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+//
+
+	
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
