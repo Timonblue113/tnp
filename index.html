@@ -284,15 +284,6 @@ function spin() {
             "SĐT": currentUser.phone,
             "Quà": winItem.label
         });
-
-// 🔥 LƯU PLAYER (QUAN TRỌNG)
-        set(playerRef, {
-            name: currentUser.name,
-            phone: currentUser.phone,
-            gift: winItem.label,
-            time: new Date().toLocaleString()
-        });
-
         // Lưu Local
         localStorage.setItem('wheel_prizes', JSON.stringify(prizes));
         localStorage.setItem('wheel_history', JSON.stringify(history));
