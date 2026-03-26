@@ -245,24 +245,6 @@ function closeForm() {
 
 function spin() {
     if (spinning) return;
-
-	 // 🔥 CHECK SĐT TRƯỚC
-    const playerRef = ref(db, 'players/' + currentUser.phone);
-
-    get(playerRef).then(snapshot => {
-        if (snapshot.exists()) {
-            alert("SĐT này đã quay rồi!");
-            return;
-        }
-
-        // ✅ CHƯA QUAY → cho quay
-        startSpin(playerRef);
-    });
-}
-
-
-	
-
     let totalQty = prizes.reduce((sum, p) => sum + p.qty, 0);
     if (totalQty <= 0) return alert("Hết quà rồi!");
 
