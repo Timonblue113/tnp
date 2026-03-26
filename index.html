@@ -164,14 +164,16 @@ input {
 <script>
 // Dữ liệu mẫu ban đầu
 const DEFAULT_PRIZES = [
-    { label: "Gối Tựa Đầu", qty: 10, weight: 7 },
-    { label: "Phiếu Rửa Xe", qty: 20, weight: 14 },
-    { label: "Khăn Lau Xe", qty: 57, weight: 34 },
-    { label: "DÙ HONDA", qty: 10, weight: 7 },
-    { label: "Nước Hoa", qty: 3, weight: 2 },
-    { label: "Voucher Phụ Kiện", qty: 1, weight: 1 },
-    { label: "Voucher Làm Đẹp Xe", qty: 2, weight: 1 },
-    { label: "Khăn Lau Xe", qty: 57, weight: 34 }
+    { label: "Voucher Làm Đẹp Xe", qty: 5, weight: 1 },
+    { label: "P.K Camera TSJ2K", qty: 1, weight: 1 },
+    { label: "Dù Honda", qty: 20, weight: 4 },
+    { label: "Combo Sổ + Viết", qty: 4, weight: 1 },
+    { label: "USB +Hộp Namecard", qty: 4, weight: 1 },
+	{ label: "Bình Giữ Nhiệt", qty: 4, weight: 1 },
+    { label: "Túi Canvas", qty: 20, weight: 4 },
+	{ label: "Gói Tựa Đầu", qty: 10, weight: 2 },
+	{ label: "Phiếu Rửa Xe", qty: 100, weight: 18 },
+	{ label: "Khăn Lau Xe", qty: 350, weight: 67 }	// Thêm cho đủ 8 nan như hình
 ];
 
 let prizes = JSON.parse(localStorage.getItem('wheel_prizes')) || DEFAULT_PRIZES;
