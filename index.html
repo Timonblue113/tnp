@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Lucky Wheel PRO MAX</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+/* ===== GIỮ NGUYÊN GIAO DIỆN CỦA TIMON ===== */
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #222 url("hinh.jpg") no-repeat center center;
+    background-size: cover; 
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+#wheelContainer {
+    position: absolute;
+    right: 200px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 700px;
+    height: 700px;
+}
+
+canvas {
+    width: 700px;
+    height: 700px;
+    filter: drop-shadow(0 0 20px rgba(0, 0, 0, 0.5));
+}
+
+#spinBtn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: bold;
+    background: radial-gradient(circle, #ffcc70, #ff3c00);
+    color: #fff;
+    border: 5px solid #fff;
+    cursor: pointer;
+    z-index: 10;
+}
+
+#arrow {
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 25px solid transparent;
+    border-bottom: 25px solid transparent;
+    border-right: 40px solid gold;
+    z-index: 20;
+}
+
+.popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.box {
+    background: #fff;
+    padding: 30px;
+    width: 400px;
+    border-radius: 15px;
+    text-align: center;
+}
+
+input {
+    width: 90%;
+    padding: 12px;
+    margin: 10px 0;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.btn {
+    padding: 12px 25px;
+    margin: 10px 5px;
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.green { background: #28a745; }
+.red   { background: #dc3545; }
+
+#infoBox {
+    position: absolute;
+    top: 40%;
+    left: 200px;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 25px;
+    min-width: 350px;
+    border-radius: 15px;
+    display: none;
+}
+
+#resultBox {
+    background: #b30000;
+    width: 500px;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    color: #fff;
+    position: relative;
+    border: 5px solid gold;
+}
+</style>
+</head>
+<body>
+
+<div id="infoBox">
+    <h2 style="color:#b30000; margin-top:0;">SẴN SÀNG!</h2>
+    <p id="infoName"></p><p id="infoPhone"></p><hr>
+    <small>Bạn có 1 lượt quay</small>
+</div>
+
+<div id="wheelContainer">
+    <div id="arrow"></div>
+    <canvas id="wheel"></canvas>
+    <button id="spinBtn">QUAY</button>
+</div>
+
+<div id="formPopup" class="popup">
+    <div class="box">
+        <h3>Nhập thông tin nhận quà</h3>
+        <input id="name" placeholder="Họ và tên">
+        <input id="phone" placeholder="Số điện thoại" type="tel">
+        <br>
+        <button class="btn green" onclick="confirmForm()">XÁC NHẬN</button>
+        <button class="btn red" onclick="closeForm()">HỦY</button>
+    </div>
+</div>
+
+<div id="resultPopup" class="popup">
+    <div id="resultBox">
+        <div class="closeBtn" onclick="closeResult()" style="position:absolute; top:10px; right:20px; cursor:pointer;">✖</div>
+        <h1 style="font-size:28px;">🎁 CHÚC MỪNG BẠN ĐÃ TRÚNG THƯỞNG</h1>
+        <div id="resultText" style="font-size:49px; font-family:'Britannic Bold'; color:yellow;"></div>
+    </div>
+</div>
+
+<script>
+// Dữ liệu mẫu ban đầu
+const DEFAULT_PRIZES = [
+    { label: "Gối Tựa Đầu", qty: 10, weight: 7 },
+    { label: "Phiếu Rửa Xe", qty: 20, weight: 14 },
+    { label: "Khăn Lau Xe", qty: 57, weight: 34 },
+    { label: "DÙ HONDA", qty: 10, weight: 7 },
+    { label: "Nước Hoa", qty: 3, weight: 2 },
+    { label: "Voucher Phụ Kiện", qty: 1, weight: 1 },
+    { label: "Voucher Làm Đẹp Xe", qty: 2, weight: 1 },
+    { label: "Khăn Lau Xe", qty: 57, weight: 34 }
+];
+
+let prizes = JSON.parse(localStorage.getItem('wheel_prizes')) || DEFAULT_PRIZES;
+let history = JSON.parse(localStorage.getItem('wheel_history')) || [];
+
+let spinning = false;
+let ready = false;
+window.isSpinningLock = false; // Biến khóa toàn cục để Firebase không ghi đè khi đang quay
+let currentUser = { name: "", phone: "" };
+
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+
+function draw() {
+    let size = 350;
+    let center = 350;
+    canvas.width = 700;
+    canvas.height = 700;
+    let arc = Math.PI * 2 / prizes.length;
+
+    for (let i = 0; i < prizes.length; i++) {
+        ctx.beginPath();
+        ctx.fillStyle = i % 2 == 0 ? "#c1121f" : "#ffffff";
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, size, i * arc, (i + 1) * arc);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(i * arc + arc / 2);
+        ctx.fillStyle = i % 2 == 0 ? "#fff" : "#c1121f";
+        ctx.font = "bold 25px Britannic Bold"; 
+        ctx.textAlign = "right";
+        ctx.fillText(prizes[i].label, size - 40, 10);
+        ctx.restore();
+    }
+
+    ctx.beginPath();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "gold";
+    ctx.arc(center, center, size - 1, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+// Khởi tạo hình vẽ ban đầu
+draw();
+
+document.getElementById("spinBtn").onclick = () => {
+    if (spinning) return;
+    if (!ready) document.getElementById("formPopup").style.display = "flex";
+    else spin();
+};
+
+function confirmForm() {
+    let name = document.getElementById("name").value;
+    let phone = document.getElementById("phone").value;
+    if (!name || !phone) return alert("Vui lòng nhập đủ!");
+
+    currentUser = { name, phone };
+    document.getElementById("formPopup").style.display = "none";
+    document.getElementById("infoName").innerText = "Khách: " + name;
+    document.getElementById("infoPhone").innerText = "SĐT: " + phone;
+    document.getElementById("infoBox").style.display = "block";
+    ready = true;
+}
+
+function closeForm() {
+    document.getElementById("formPopup").style.display = "none";
+}
+
+function spin() {
+    if (spinning) return;
+
+    let totalQty = prizes.reduce((sum, p) => sum + p.qty, 0);
+    if (totalQty <= 0) return alert("Hết quà rồi!");
+
+    spinning = true;
+    window.isSpinningLock = true; // KHÓA Firebase
+
+    let totalWeight = prizes.reduce((sum, p) => sum + (p.qty > 0 ? p.weight : 0), 0);
+    let randomNum = Math.random() * totalWeight;
+    let weightSum = 0;
+    let winItem = null;
+    let resultIndex = -1;
+
+    for (let i = 0; i < prizes.length; i++) {
+        if (prizes[i].qty > 0) {
+            weightSum += prizes[i].weight;
+            if (randomNum <= weightSum) {
+                winItem = prizes[i];
+                resultIndex = i;
+                break;
+            }
+        }
+    }
+
+    let arc = 360 / prizes.length;
+    let stopAngle = 360 - (resultIndex * arc) - (arc / 2);
+    let totalRotate = 360 * 10 + stopAngle;
+
+    canvas.style.transition = "transform 5s cubic-bezier(0.15, 0, 0.15, 1)";
+    canvas.style.transform = `rotate(${totalRotate}deg)`;
+
+    setTimeout(() => {
+        if (winItem.qty > 0) winItem.qty--;
+
+        history.push({
+            "Thời gian": new Date().toLocaleString(),
+            "Tên": currentUser.name,
+            "SĐT": currentUser.phone,
+            "Quà": winItem.label
+        });
+
+        // Lưu Local
+        localStorage.setItem('wheel_prizes', JSON.stringify(prizes));
+        localStorage.setItem('wheel_history', JSON.stringify(history));
+
+        // Lệnh lưu lên Firebase (Hàm này được định nghĩa ở script module bên dưới)
+        if (window.saveFirebase) window.saveFirebase();
+
+        document.getElementById("resultText").innerText = winItem.label;
+        document.getElementById("resultPopup").style.display = "flex";
+
+        spinning = false;
+        ready = false;
+        window.isSpinningLock = false; // MỞ KHÓA Firebase
+    }, 5000);
+}
+
+function closeResult() {
+    document.getElementById("resultPopup").style.display = "none";
+    document.getElementById("infoBox").style.display = "none";
+    canvas.style.transition = "none";
+    canvas.style.transform = "rotate(0deg)";
+    document.getElementById("name").value = "";
+    document.getElementById("phone").value = "";
+    draw();
+}
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+// ĐÃ CẬP NHẬT THEO HÌNH CỦA BẠN (Asia-Southeast1)
+const firebaseConfig = {
+  apiKey: "AIzaSyDM7_qE8-GKjWINJGNJaQUzoeUGohfDsYs",
+  authDomain: "tnp2603.firebaseapp.com",
+  databaseURL: "https://tnp2603-default-rtdb.asia-southeast1.firebasedatabase.app",// <--- Quan trọng nhất là chỗ này
+  projectId: "tnp2603",
+};
+
+
+
+
+
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// 1. Lắng nghe dữ liệu Realtime
+onValue(ref(db, '/'), (snapshot) => {
+    const data = snapshot.val();
+    
+    // Nếu Firebase trống hoàn toàn, mình chủ động đẩy data lên 1 lần duy nhất
+    if (!data || !data.prizes) {
+        console.log("Database trống, đang khởi tạo dữ liệu mẫu...");
+        set(ref(db, 'prizes'), DEFAULT_PRIZES);
+        set(ref(db, 'history'), []);
+        return;
+    }
+
+    // Cập nhật vào máy khách nếu không đang trong vòng quay
+    if (!window.isSpinningLock) {
+        prizes = data.prizes;
+        history = data.history || [];
+        localStorage.setItem('wheel_prizes', JSON.stringify(prizes));
+        localStorage.setItem('wheel_history', JSON.stringify(history));
+        draw(); 
+        console.log("Đã đồng bộ Realtime từ Singapore!");
+    }
+});
+
+// 2. Hàm lưu dữ liệu (được gọi từ code xử lý Spin)
+window.saveFirebase = () => {
+    set(ref(db, 'prizes'), prizes);
+    set(ref(db, 'history'), history);
+};
+
+// 3. F9 để tải file Excel
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'F9') {
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(history), "Khách hàng");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(prizes), "Tồn kho");
+        XLSX.writeFile(wb, "BaoCao_QuayThuong.xlsx");
+    }
+});
+</script>
+
+</body>
+</html>
